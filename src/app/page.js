@@ -11,6 +11,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [inputTouched, setInputTouched] = useState(false);
+  const [checklistMode, setChecklistMode] = useState(false);
+  const [checkedSteps, setCheckedSteps] = useState({});
   const resultRef = useRef(null);
 
   const handleGenerate = async (targetDifficulty = null) => {
@@ -23,6 +25,8 @@ export default function Home() {
     }
 
     setLoading(true);
+    setChecklistMode(false);
+    setCheckedSteps({});
 
     try {
       const payload = { input: input.trim() };
@@ -45,7 +49,6 @@ export default function Home() {
 
       setResult(data);
 
-      // Scroll to result after a brief delay for render
       setTimeout(() => {
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
@@ -69,6 +72,22 @@ export default function Home() {
 
     handleGenerate(DIFFICULTY_LEVELS[targetIndex]);
   };
+
+  const handleStartNow = () => {
+    setChecklistMode(true);
+    setCheckedSteps({});
+  };
+
+  const toggleStep = (index) => {
+    setCheckedSteps((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
+
+  const completedCount = Object.values(checkedSteps).filter(Boolean).length;
+  const totalSteps = result?.steps?.length || 0;
+  const allDone = totalSteps > 0 && completedCount === totalSteps;
 
   const getDifficultyClass = (difficulty) => {
     switch (difficulty?.toLowerCase()) {
@@ -108,7 +127,7 @@ export default function Home() {
           <h1 className={styles.title}>ActionBridge</h1>
         </div>
         <p className={styles.subtitle}>
-          Turn what you learn into what you <em>do</em> — in under 90 minutes
+          Turn what you learn into what you <em>do</em> — in under 60 minutes
         </p>
       </header>
 
@@ -142,10 +161,10 @@ export default function Home() {
           {loading ? (
             <>
               <span className={styles.spinner} />
-              <span className={styles.loadingText}>Crafting your action plan…</span>
+              <span className={styles.loadingText}>Finding your next action…</span>
             </>
           ) : (
-            <>⚡ Generate Action Plan</>
+            <>⚡ Get Your Next Action</>
           )}
         </button>
       </div>
@@ -191,7 +210,7 @@ export default function Home() {
 
             <div className={styles.resultHeader}>
               <span className={styles.resultHeaderDot} />
-              Action Plan Generated
+              Your Action is Ready
             </div>
 
             {/* ── Task Section ── */}
@@ -203,27 +222,57 @@ export default function Home() {
               <p className={styles.taskText}>{result.task}</p>
             </div>
 
-            {/* ── Steps Section ── */}
+            {/* ── Steps Section (or Checklist) ── */}
             <div className={styles.sectionCard}>
               <div className={styles.sectionHeader}>
-                <span className={styles.sectionIcon}>📋</span>
-                <span className={styles.sectionLabel}>Steps to Complete</span>
+                <span className={styles.sectionIcon}>{checklistMode ? "✏️" : "🚀"}</span>
+                <span className={styles.sectionLabel}>
+                  {checklistMode ? `Progress — ${completedCount}/${totalSteps} done` : "Start Here"}
+                </span>
               </div>
-              <ol className={styles.stepsList}>
-                {result.steps.map((step, i) => (
-                  <li key={i} className={styles.stepItem}>
-                    <span className={styles.stepNumber}>{i + 1}</span>
-                    <span className={styles.stepText}>{step}</span>
-                  </li>
-                ))}
-              </ol>
+
+              {checklistMode ? (
+                <ul className={styles.checklistContainer}>
+                  {result.steps.map((step, i) => (
+                    <li
+                      key={i}
+                      className={`${styles.checklistItem} ${checkedSteps[i] ? styles.checklistItemDone : ""}`}
+                      onClick={() => toggleStep(i)}
+                    >
+                      <span className={`${styles.checkbox} ${checkedSteps[i] ? styles.checkboxChecked : ""}`}>
+                        {checkedSteps[i] ? "✓" : ""}
+                      </span>
+                      <span className={`${styles.checklistText} ${checkedSteps[i] ? styles.checklistTextDone : ""}`}>
+                        {step}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <ol className={styles.stepsList}>
+                  {result.steps.map((step, i) => (
+                    <li key={i} className={styles.stepItem}>
+                      <span className={styles.stepNumber}>{i + 1}</span>
+                      <span className={styles.stepText}>{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
             </div>
+
+            {/* ── Completion Message ── */}
+            {allDone && (
+              <div className={styles.completionBanner}>
+                <span className={styles.completionIcon}>🎉</span>
+                <span>You did it! All steps completed. Time to generate your next action!</span>
+              </div>
+            )}
 
             {/* ── Expected Outcome Section ── */}
             <div className={styles.sectionCard}>
               <div className={styles.sectionHeader}>
                 <span className={styles.sectionIcon}>✅</span>
-                <span className={styles.sectionLabel}>Expected Outcome</span>
+                <span className={styles.sectionLabel}>What You'll Have</span>
               </div>
               <p className={styles.outcomeText}>{result.expected_outcome}</p>
             </div>
@@ -236,6 +285,18 @@ export default function Home() {
               </span>
             </div>
           </div>
+
+          {/* ── Start Now Button ── */}
+          {!checklistMode && (
+            <button
+              id="start-now-btn"
+              className={styles.startNowBtn}
+              onClick={handleStartNow}
+              disabled={loading}
+            >
+              🚀 Start Now
+            </button>
+          )}
 
           {/* ── Difficulty Adjustment Buttons ── */}
           <div className={styles.adjustGroup}>
